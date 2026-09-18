@@ -358,7 +358,7 @@ def serialize_tenant_to_v1_json(tenant: Tenant) -> dict:
             },
         }
 
-    return {"dados": {tenant.tenant_slug: info}}
+    return {tenant.tenant_slug: info}
 
 
 # ── Import / Export ───────────────────────────────────────────────────────────

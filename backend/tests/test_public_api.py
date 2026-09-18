@@ -90,32 +90,31 @@ class TestPublicList:
     def test_empty(self, client, api_key_raw):
         resp = client.get("/api/v1/tenants", headers=_headers(api_key_raw))
         assert resp.status_code == 200
-        assert resp.json() == []
+        assert resp.json() == {"dados": {}}
 
     def test_returns_active_tenants_only(self, client, api_key_raw, session):
         _create_full_tenant(session, slug="active_one", is_active=True)
         _create_full_tenant(session, slug="inactive_one", is_active=False)
         resp = client.get("/api/v1/tenants", headers=_headers(api_key_raw))
-        slugs = [list(item["dados"].keys())[0] for item in resp.json()]
-        assert "active_one" in slugs
-        assert "inactive_one" not in slugs
+        dados = resp.json()["dados"]
+        assert "active_one" in dados
+        assert "inactive_one" not in dados
 
-    def test_returns_array_of_info_objects(self, client, api_key_raw, session):
+    def test_returns_single_dados_object(self, client, api_key_raw, session):
         _create_full_tenant(session, slug="s1")
         _create_full_tenant(session, slug="s2")
         resp = client.get("/api/v1/tenants", headers=_headers(api_key_raw))
         data = resp.json()
-        assert isinstance(data, list)
-        assert len(data) == 2
-        for item in data:
-            assert "dados" in item
-            slug = list(item["dados"].keys())[0]
-            assert "tenant" in item["dados"][slug]
+        assert isinstance(data, dict)
+        assert "dados" in data
+        assert len(data["dados"]) == 2
+        for slug, info in data["dados"].items():
+            assert "tenant" in info
 
     def test_full_format(self, client, api_key_raw, session):
         _create_full_tenant(session)
         resp = client.get("/api/v1/tenants", headers=_headers(api_key_raw))
-        info = resp.json()[0]["dados"]["test_tenant"]
+        info = resp.json()["dados"]["test_tenant"]
         assert info["tenant"] == "test_tenant"
         # conecta
         assert info["conecta"]["base_url"] == "https://conecta.example.com"
@@ -133,7 +132,7 @@ class TestPublicList:
     def test_encrypted_fields_decrypted(self, client, api_key_raw, session):
         _create_full_tenant(session)
         resp = client.get("/api/v1/tenants", headers=_headers(api_key_raw))
-        info = resp.json()[0]["dados"]["test_tenant"]
+        info = resp.json()["dados"]["test_tenant"]
         # These were encrypted before storage
         assert info["conecta"]["token"] == "ctok123"
         assert info["whatsapp"]["turn-io"]["access-token"] == "wa_at_123"
