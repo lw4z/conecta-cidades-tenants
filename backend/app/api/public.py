@@ -19,7 +19,7 @@ def list_tenants_public(
     dados = {}
     for t in tenants:
         dados.update(serialize_tenant_to_v1_json(t))
-    return {"dados": dados}
+    return [{"dados": dados}]
 
 
 @router.get("/tenants/{tenant_slug}")
@@ -44,4 +44,4 @@ def get_tenant_public(
                 }
             },
         )
-    return {"dados": serialize_tenant_to_v1_json(tenant)}
+    return [{"dados": serialize_tenant_to_v1_json(tenant)}]

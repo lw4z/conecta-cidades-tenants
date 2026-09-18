@@ -90,13 +90,13 @@ class TestPublicList:
     def test_empty(self, client, api_key_raw):
         resp = client.get("/api/v1/tenants", headers=_headers(api_key_raw))
         assert resp.status_code == 200
-        assert resp.json() == {"dados": {}}
+        assert resp.json() == [{"dados": {}}]
 
     def test_returns_active_tenants_only(self, client, api_key_raw, session):
         _create_full_tenant(session, slug="active_one", is_active=True)
         _create_full_tenant(session, slug="inactive_one", is_active=False)
         resp = client.get("/api/v1/tenants", headers=_headers(api_key_raw))
-        dados = resp.json()["dados"]
+        dados = resp.json()[0]["dados"]
         assert "active_one" in dados
         assert "inactive_one" not in dados
 
@@ -105,16 +105,17 @@ class TestPublicList:
         _create_full_tenant(session, slug="s2")
         resp = client.get("/api/v1/tenants", headers=_headers(api_key_raw))
         data = resp.json()
-        assert isinstance(data, dict)
-        assert "dados" in data
-        assert len(data["dados"]) == 2
-        for slug, info in data["dados"].items():
+        assert isinstance(data, list)
+        assert len(data) == 1
+        assert "dados" in data[0]
+        assert len(data[0]["dados"]) == 2
+        for slug, info in data[0]["dados"].items():
             assert "tenant" in info
 
     def test_full_format(self, client, api_key_raw, session):
         _create_full_tenant(session)
         resp = client.get("/api/v1/tenants", headers=_headers(api_key_raw))
-        info = resp.json()["dados"]["test_tenant"]
+        info = resp.json()[0]["dados"]["test_tenant"]
         assert info["tenant"] == "test_tenant"
         # conecta
         assert info["conecta"]["base_url"] == "https://conecta.example.com"
@@ -132,7 +133,7 @@ class TestPublicList:
     def test_encrypted_fields_decrypted(self, client, api_key_raw, session):
         _create_full_tenant(session)
         resp = client.get("/api/v1/tenants", headers=_headers(api_key_raw))
-        info = resp.json()["dados"]["test_tenant"]
+        info = resp.json()[0]["dados"]["test_tenant"]
         # These were encrypted before storage
         assert info["conecta"]["token"] == "ctok123"
         assert info["whatsapp"]["turn-io"]["access-token"] == "wa_at_123"
@@ -161,7 +162,7 @@ class TestPublicGetBySlug:
         _create_full_tenant(session, slug="my_tenant")
         resp = client.get("/api/v1/tenants/my_tenant", headers=_headers(api_key_raw))
         assert resp.status_code == 200
-        info = resp.json()["dados"]["my_tenant"]
+        info = resp.json()[0]["dados"]["my_tenant"]
         assert info["tenant"] == "my_tenant"
 
     def test_not_found(self, client, api_key_raw, session):
@@ -179,8 +180,10 @@ class TestPublicGetBySlug:
         _create_full_tenant(session, slug="fmt_check")
         resp = client.get("/api/v1/tenants/fmt_check", headers=_headers(api_key_raw))
         data = resp.json()
-        # Wrapped in { "dados": { "slug": { ... } } }
-        assert "dados" in data
-        assert "fmt_check" in data["dados"]
-        assert isinstance(data["dados"]["fmt_check"], dict)
-        assert data["dados"]["fmt_check"]["tenant"] == "fmt_check"
+        # Wrapped in [{ "dados": { "slug": { ... } } }]
+        assert isinstance(data, list)
+        assert len(data) == 1
+        assert "dados" in data[0]
+        assert "fmt_check" in data[0]["dados"]
+        assert isinstance(data[0]["dados"]["fmt_check"], dict)
+        assert data[0]["dados"]["fmt_check"]["tenant"] == "fmt_check"

@@ -77,7 +77,7 @@ function buildPublicJson(t: TenantDetailRead) {
     }
   }
 
-  return { dados: { [t.tenant_slug]: info } }
+  return [{ dados: { [t.tenant_slug]: info } }]
 }
 
 function buildCurl(t: TenantDetailRead) {
