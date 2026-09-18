@@ -205,37 +205,52 @@ curl http://localhost:8080/api/v1/tenants/cidade-exemplo_sp_br \
   -H "X-API-Key: SUA_API_KEY"
 ```
 
-**Formato de resposta:**
+**Formato de resposta (lista):**
 
 ```json
-[
-  {
-    "dados": {
-      "cidade-exemplo_sp_br": {
-        "tenant": "cidade-exemplo_sp_br",
-        "contract_id": 16,
-        "conecta": {
-          "base_url": "https://conecta.example.com",
-          "token": "xxx"
-        },
-        "whatsapp": {
-          "provider": "turn-io",
-          "base_url": "https://whatsapp.turn.io",
-          "token": "xxx"
-        },
-        "chat": {
-          "base_url": "https://chat.example.com",
-          "account_id": 123
-        },
-        "ai": {
-          "api_key": "sk-xxx",
-          "horario_cron": "0 8 * * *",
-          "horario_timezone": "America/Sao_Paulo"
-        }
+{
+  "dados": {
+    "cidade-exemplo_sp_br": {
+      "tenant": "cidade-exemplo_sp_br",
+      "contract_id": 16,
+      "conecta": {
+        "base_url": "https://conecta.example.com",
+        "token": "xxx"
+      },
+      "whatsapp": {
+        "provider": "turn-io",
+        "base_url": "https://whatsapp.turn.io",
+        "token": "xxx"
+      },
+      "chat": {
+        "base_url": "https://chat.example.com",
+        "account_id": 123
+      },
+      "ai": {
+        "api_key": "sk-xxx",
+        "horario_cron": "0 8 * * *",
+        "horario_timezone": "America/Sao_Paulo"
       }
+    },
+    "outra-cidade_sp_br": {
+      "tenant": "outra-cidade_sp_br",
+      ...
     }
   }
-]
+}
+```
+
+**Formato de resposta (tenant individual):**
+
+```json
+{
+  "dados": {
+    "cidade-exemplo_sp_br": {
+      "tenant": "cidade-exemplo_sp_br",
+      ...
+    }
+  }
+}
 ```
 
 ### API Keys
