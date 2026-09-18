@@ -1,0 +1,20 @@
+services:
+  conecta-tenants:
+    build: .
+    image: conecta-cidades-tenants:latest
+    ports:
+      - "8080:8000"
+    volumes:
+      - tenants_data:/data
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-change-me-to-a-random-string}
+      - FIELD_ENCRYPTION_KEY=${FIELD_ENCRYPTION_KEY:-XrmQ9n3-P4dg9zkuVrHxMrZA2LpiYFu8myHKSzfVbXI=}
+      - TENANTS_API_KEY=${TENANTS_API_KEY:-}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=480
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@conecta.local}
+    restart: unless-stopped
+
+volumes:
+  tenants_data:
