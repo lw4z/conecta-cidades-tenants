@@ -25,6 +25,7 @@ export default function TenantsListPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Import modal state
+  const [importOpen, setImportOpen] = useState(false)
   const [importTab, setImportTab] = useState<ImportTab>('file')
   const [importFile, setImportFile] = useState<File | null>(null)
   const [pasteText, setPasteText] = useState('')
@@ -54,12 +55,13 @@ export default function TenantsListPage() {
   }
 
   const resetImport = () => {
+    setImportOpen(false)
+    setImportTab('file')
     setImportFile(null)
     setPasteText('')
     setPasteError('')
     setImportPreview(null)
     setImportResult(null)
-    setImportTab('file')
   }
 
   const handleImportFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -166,7 +168,7 @@ export default function TenantsListPage() {
             Exportar
           </button>
           <button
-            onClick={() => resetImport()}
+            onClick={() => { resetImport(); setImportOpen(true) }}
             className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -290,7 +292,7 @@ export default function TenantsListPage() {
       )}
 
       {/* Import Modal */}
-      {(importPreview || importTab) && (
+      {importOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
             {importResult ? (
