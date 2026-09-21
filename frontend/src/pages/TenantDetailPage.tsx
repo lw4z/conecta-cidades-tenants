@@ -54,7 +54,7 @@ function buildPublicJson(t: TenantDetailRead) {
       api_access_token_bot: t.chat.api_access_token_bot,
       inbox: t.chat.inboxes.map((i) => ({
         id: i.inbox_id ?? i.id,
-        inbox_identifier: i.inbox_identifier,
+        ...(i.inbox_identifier ? { inbox_identifier: i.inbox_identifier } : {}),
       })),
       csat: { flow_id: t.chat.csat_flow_id },
     }

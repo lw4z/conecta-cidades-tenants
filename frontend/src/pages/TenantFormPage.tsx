@@ -54,6 +54,8 @@ interface FormData {
   ai_horario_msg: string
 }
 
+type WhatsappProvider = 'turn-io' | 'meta-cloud-api'
+
 const EMPTY_FORM: FormData = {
   tenant_slug: '',
   display_name: '',
@@ -130,7 +132,7 @@ function tenantToForm(t: TenantDetailRead): FormData {
 
 function formToPayload(form: FormData): TenantCreatePayload {
   const hasConecta = form.conecta_base_url || form.conecta_token
-  const hasWhatsapp = form.whatsapp_base_url || form.whatsapp_access_token
+  const hasWhatsapp = form.whatsapp_base_url || form.whatsapp_access_token || form.whatsapp_config_json
   const hasChat = form.chat_base_url || form.chat_api_access_token
   const hasAi = form.ai_api_key || form.ai_database || form.ai_nome_projeto
 
@@ -360,51 +362,98 @@ function ConectaSection({ form, setField }: { form: FormData; setField: <K exten
 }
 
 function WhatsappSection({ form, setField }: { form: FormData; setField: <K extends keyof FormData>(k: K, v: FormData[K]) => void }) {
+  // Detect provider from config_json or default to turn-io
+  let provider: WhatsappProvider = 'turn-io'
+  if (form.whatsapp_config_json) {
+    try {
+      const cfg = JSON.parse(form.whatsapp_config_json)
+      if (cfg && typeof cfg === 'object' && 'meta-cloud-api' in cfg) {
+        provider = 'meta-cloud-api'
+      }
+    } catch { /* ignore */ }
+  }
+
   return (
     <div className="space-y-4">
-      <FormField label="Base URL">
-        <Input value={form.whatsapp_base_url} onChange={(v) => setField('whatsapp_base_url', v)} placeholder="https://..." />
+      <FormField label="Provider">
+        <select
+          value={provider}
+          onChange={(e) => {
+            const v = e.target.value as WhatsappProvider
+            // When switching providers, reinitialize config_json
+            if (v === 'meta-cloud-api') {
+              setField('whatsapp_config_json', JSON.stringify({
+                'meta-cloud-api': {
+                  base_url: 'https://graph.facebook.com',
+                  number: '',
+                  phone_number_id: '',
+                  token: '',
+                  waba_id: '',
+                  business_id: '',
+                },
+              }, null, 2))
+              setField('whatsapp_base_url', '')
+              setField('whatsapp_access_token', '')
+              setField('whatsapp_business_id', '')
+              setField('whatsapp_token', '')
+            } else {
+              setField('whatsapp_config_json', '')
+            }
+          }}
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+        >
+          <option value="turn-io">Turn.io</option>
+          <option value="meta-cloud-api">Meta Cloud API</option>
+        </select>
       </FormField>
-      <div className="grid grid-cols-2 gap-4">
-        <FormField label="Version">
-          <Input value={form.whatsapp_version} onChange={(v) => setField('whatsapp_version', v)} placeholder="v1" />
-        </FormField>
-        <FormField label="Template Namespace">
-          <Input value={form.whatsapp_template_namespace} onChange={(v) => setField('whatsapp_template_namespace', v)} placeholder="UUID" />
-        </FormField>
-      </div>
-      <FormField label="Access Token">
-        <SecretInput value={form.whatsapp_access_token} onChange={(v) => setField('whatsapp_access_token', v)} />
-      </FormField>
-      <div className="grid grid-cols-2 gap-4">
-        <FormField label="Business ID">
-          <Input value={form.whatsapp_business_id} onChange={(v) => setField('whatsapp_business_id', v)} />
-        </FormField>
-        <FormField label="Username">
-          <Input value={form.whatsapp_username} onChange={(v) => setField('whatsapp_username', v)} />
-        </FormField>
-      </div>
-      <FormField label="Password">
-        <SecretInput value={form.whatsapp_password} onChange={(v) => setField('whatsapp_password', v)} />
-      </FormField>
-      <FormField label="Token (Bearer)">
-        <SecretInput value={form.whatsapp_token} onChange={(v) => setField('whatsapp_token', v)} />
-      </FormField>
-      <details className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-        <summary className="cursor-pointer text-xs font-medium text-gray-700 hover:text-gray-900">
-          Config JSON avançado (campos extras do provedor)
-        </summary>
-        <p className="mt-1 text-[11px] text-gray-500">
-          JSON com campos adicionais do provedor WhatsApp (ex: meta-cloud-api, number, phone_number_id).
-        </p>
-        <textarea
-          value={form.whatsapp_config_json}
-          onChange={(e) => setField('whatsapp_config_json', e.target.value)}
-          placeholder='{"number": "...", "phone_number_id": "..."}'
-          rows={4}
-          className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-        />
-      </details>
+
+      {provider === 'turn-io' ? (
+        <>
+          <FormField label="Base URL">
+            <Input value={form.whatsapp_base_url} onChange={(v) => setField('whatsapp_base_url', v)} placeholder="https://..." />
+          </FormField>
+          <div className="grid grid-cols-2 gap-4">
+            <FormField label="Version">
+              <Input value={form.whatsapp_version} onChange={(v) => setField('whatsapp_version', v)} placeholder="v1" />
+            </FormField>
+            <FormField label="Template Namespace">
+              <Input value={form.whatsapp_template_namespace} onChange={(v) => setField('whatsapp_template_namespace', v)} placeholder="UUID" />
+            </FormField>
+          </div>
+          <FormField label="Access Token">
+            <SecretInput value={form.whatsapp_access_token} onChange={(v) => setField('whatsapp_access_token', v)} />
+          </FormField>
+          <div className="grid grid-cols-2 gap-4">
+            <FormField label="Business ID">
+              <Input value={form.whatsapp_business_id} onChange={(v) => setField('whatsapp_business_id', v)} />
+            </FormField>
+            <FormField label="Username">
+              <Input value={form.whatsapp_username} onChange={(v) => setField('whatsapp_username', v)} />
+            </FormField>
+          </div>
+          <FormField label="Password">
+            <SecretInput value={form.whatsapp_password} onChange={(v) => setField('whatsapp_password', v)} />
+          </FormField>
+          <FormField label="Token (Bearer)">
+            <SecretInput value={form.whatsapp_token} onChange={(v) => setField('whatsapp_token', v)} />
+          </FormField>
+        </>
+      ) : (
+        <>
+          <FormField label="Config JSON (Meta Cloud API)">
+            <textarea
+              value={form.whatsapp_config_json}
+              onChange={(e) => setField('whatsapp_config_json', e.target.value)}
+              placeholder={'{\n  "meta-cloud-api": {\n    "base_url": "https://graph.facebook.com",\n    "number": "...",\n    "phone_number_id": "...",\n    "token": "Bearer ...",\n    "waba_id": "...",\n    "business_id": "..."\n  }\n}'}
+              rows={12}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+            />
+          </FormField>
+          <p className="text-[11px] text-gray-500">
+            Preencha os campos dentro do bloco <code>meta-cloud-api</code>: base_url, number, phone_number_id, token, waba_id, business_id.
+          </p>
+        </>
+      )}
     </div>
   )
 }
@@ -603,7 +652,7 @@ export default function TenantFormPage() {
 
   if (isEdit) {
     const hasConecta = !!(form.conecta_base_url || form.conecta_token)
-    const hasWhatsapp = !!(form.whatsapp_base_url || form.whatsapp_access_token)
+    const hasWhatsapp = !!(form.whatsapp_base_url || form.whatsapp_access_token || form.whatsapp_config_json)
     const hasChat = !!(form.chat_base_url || form.chat_api_access_token)
     const hasAi = !!(form.ai_api_key || form.ai_database || form.ai_nome_projeto)
 
@@ -631,7 +680,7 @@ export default function TenantFormPage() {
           <ConectaSection form={form} setField={setField} />
         </Accordion>
 
-        <Accordion title="WhatsApp (Turn.io)" icon={<ChatIcon />} hasData={hasWhatsapp}>
+        <Accordion title="WhatsApp" icon={<ChatIcon />} hasData={hasWhatsapp}>
           <WhatsappSection form={form} setField={setField} />
         </Accordion>
 
