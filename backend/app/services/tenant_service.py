@@ -295,8 +295,7 @@ def serialize_tenant_to_v1_json(tenant: Tenant) -> dict:
         raw_config = getattr(tenant.conecta, "config_json", "") or ""
         if raw_config:
             try:
-                decrypted_config = decrypt_field(raw_config)
-                conecta_block.update(json.loads(decrypted_config))
+                conecta_block.update(json.loads(raw_config))
             except Exception:
                 pass
         info["conecta"] = conecta_block

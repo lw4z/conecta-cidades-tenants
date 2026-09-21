@@ -143,6 +143,43 @@ class TestPublicList:
         assert info["chat"]["api_access_token_bot"] == "chat_bot_tok"
         assert info["ai"]["api_key"] == "ai_key_123"
 
+    def test_conecta_config_json_extras_included(self, client, api_key_raw, session):
+        """Conecta config_json extras (e.g. servico_fluxo_nativo) must appear in API response."""
+        import json as _json
+        t = Tenant(tenant_slug="conecta_extras", display_name="conecta extras")
+        session.add(t)
+        session.flush()
+        session.add(TenantConecta(
+            tenant_id=t.id,
+            base_url="https://extra.example.com",
+            token=encrypt_field("tok"),
+            config_json=_json.dumps({
+                "servico_fluxo_nativo": ["flow1", "flow2"],
+                "custom_field": "custom_value",
+            }),
+        ))
+        session.commit()
+        resp = client.get("/api/v1/tenants", headers=_headers(api_key_raw))
+        info = resp.json()[0]["dados"]["conecta_extras"]
+        assert info["conecta"]["base_url"] == "https://extra.example.com"
+        assert info["conecta"]["servico_fluxo_nativo"] == ["flow1", "flow2"]
+        assert info["conecta"]["custom_field"] == "custom_value"
+
+    def test_root_config_json_extras_included(self, client, api_key_raw, session):
+        """Root-level config_json extras (e.g. contract_id) must appear in API response."""
+        import json as _json
+        t = Tenant(
+            tenant_slug="root_extras",
+            display_name="root extras",
+            config_json=_json.dumps({"contract_id": 1002, "extra_root": True}),
+        )
+        session.add(t)
+        session.commit()
+        resp = client.get("/api/v1/tenants", headers=_headers(api_key_raw))
+        info = resp.json()[0]["dados"]["root_extras"]
+        assert info["contract_id"] == 1002
+        assert info["extra_root"] is True
+
 
 # ── GET /api/v1/tenants/{slug} ──────────────────────────────────────────────
 
