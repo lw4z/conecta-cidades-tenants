@@ -6,6 +6,15 @@ import api from '../api/client'
 
 const PER_PAGE = 10
 
+type ImportTab = 'file' | 'paste'
+
+function validateImportJson(data: unknown): Record<string, unknown> | string {
+  if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+    return 'Esperado um objeto com tenants (chave=slug).'
+  }
+  return data as Record<string, unknown>
+}
+
 export default function TenantsListPage() {
   const navigate = useNavigate()
   const qc = useQueryClient()
@@ -16,7 +25,10 @@ export default function TenantsListPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Import modal state
+  const [importTab, setImportTab] = useState<ImportTab>('file')
   const [importFile, setImportFile] = useState<File | null>(null)
+  const [pasteText, setPasteText] = useState('')
+  const [pasteError, setPasteError] = useState('')
   const [importPreview, setImportPreview] = useState<Record<string, unknown> | null>(null)
   const [importing, setImporting] = useState(false)
   const [importResult, setImportResult] = useState<{ created: number; updated: number; errors: string[] } | null>(null)
@@ -41,17 +53,28 @@ export default function TenantsListPage() {
     URL.revokeObjectURL(url)
   }
 
+  const resetImport = () => {
+    setImportFile(null)
+    setPasteText('')
+    setPasteError('')
+    setImportPreview(null)
+    setImportResult(null)
+    setImportTab('file')
+  }
+
   const handleImportFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
     setImportFile(file)
     setImportResult(null)
+    setPasteError('')
     const reader = new FileReader()
     reader.onload = () => {
       try {
         const data = JSON.parse(reader.result as string)
-        if (typeof data !== 'object' || Array.isArray(data)) {
-          alert('Arquivo JSON inválido. Esperado um objeto com tenants.')
+        const err = validateImportJson(data)
+        if (typeof err === 'string') {
+          alert(err)
           setImportFile(null)
           return
         }
@@ -63,6 +86,27 @@ export default function TenantsListPage() {
     }
     reader.readAsText(file)
     e.target.value = ''
+  }
+
+  const handlePasteValidate = () => {
+    setPasteError('')
+    setImportResult(null)
+    const text = pasteText.trim()
+    if (!text) {
+      setPasteError('Cole o conteúdo JSON acima.')
+      return
+    }
+    try {
+      const data = JSON.parse(text)
+      const err = validateImportJson(data)
+      if (typeof err === 'string') {
+        setPasteError(err)
+        return
+      }
+      setImportPreview(data)
+    } catch {
+      setPasteError('JSON inválido. Verifique a sintaxe.')
+    }
   }
 
   const handleImportConfirm = async () => {
@@ -122,7 +166,7 @@ export default function TenantsListPage() {
             Exportar
           </button>
           <button
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => resetImport()}
             className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -246,7 +290,7 @@ export default function TenantsListPage() {
       )}
 
       {/* Import Modal */}
-      {importPreview && (
+      {(importPreview || importTab) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
             {importResult ? (
@@ -269,19 +313,21 @@ export default function TenantsListPage() {
                   )}
                 </div>
                 <button
-                  onClick={() => { setImportPreview(null); setImportFile(null); setImportResult(null) }}
+                  onClick={resetImport}
                   className="mt-5 w-full rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800"
                 >
                   Fechar
                 </button>
               </div>
-            ) : (
+            ) : importPreview ? (
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">Importar tenants</h3>
-                <p className="mt-1 text-sm text-gray-500">Arquivo: {importFile?.name}</p>
+                <p className="mt-1 text-sm text-gray-500">
+                  {importFile ? `Arquivo: ${importFile.name}` : 'Conteúdo colado'}
+                </p>
                 <div className="mt-4 rounded-lg bg-gray-50 p-4">
                   <p className="text-sm text-gray-700">
-                    <span className="font-semibold">{tenantCount}</span> tenant(s) encontrado(s) no arquivo:
+                    <span className="font-semibold">{tenantCount}</span> tenant(s) encontrado(s):
                   </p>
                   <ul className="mt-2 max-h-40 space-y-1 overflow-auto text-sm text-gray-600">
                     {Object.keys(importPreview).map((slug) => (
@@ -291,7 +337,7 @@ export default function TenantsListPage() {
                 </div>
                 <div className="mt-5 flex gap-3">
                   <button
-                    onClick={() => { setImportPreview(null); setImportFile(null) }}
+                    onClick={resetImport}
                     className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
                   >
                     Cancelar
@@ -302,6 +348,102 @@ export default function TenantsListPage() {
                     className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
                   >
                     {importing ? 'Importando...' : 'Confirmar importação'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Importar tenants</h3>
+                <p className="mt-1 text-sm text-gray-500">Escolha como deseja importar os tenants</p>
+
+                {/* Tabs */}
+                <div className="mt-4 flex rounded-lg border border-gray-200 bg-gray-50 p-1">
+                  <button
+                    onClick={() => { setImportTab('file'); setPasteError(''); setImportResult(null) }}
+                    className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                      importTab === 'file'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    <svg className="mr-1.5 inline h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Arquivo
+                  </button>
+                  <button
+                    onClick={() => { setImportTab('paste'); setImportFile(null); setPasteError(''); setImportResult(null) }}
+                    className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                      importTab === 'paste'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    <svg className="mr-1.5 inline h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    Colar JSON
+                  </button>
+                </div>
+
+                {/* Tab content */}
+                {importTab === 'file' ? (
+                  <div className="mt-4">
+                    <label className="block cursor-pointer rounded-lg border-2 border-dashed border-gray-300 p-6 text-center hover:border-blue-400 hover:bg-blue-50/50">
+                      <svg className="mx-auto h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      <p className="mt-2 text-sm text-gray-600">
+                        <span className="font-semibold text-blue-600">Clique para selecionar</span> ou arraste um arquivo
+                      </p>
+                      <p className="mt-1 text-xs text-gray-400">.json</p>
+                      <input
+                        type="file"
+                        accept=".json"
+                        onChange={handleImportFileSelect}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                ) : (
+                  <div className="mt-4">
+                    <textarea
+                      value={pasteText}
+                      onChange={(e) => { setPasteText(e.target.value); setPasteError('') }}
+                      placeholder='Cole aqui o JSON, por exemplo:\n{\n  "tenant_slug": {\n    "tenant_slug": "tenant_slug",\n    "display_name": "Nome"\n  }\n}'
+                      rows={12}
+                      className={`w-full rounded-lg border px-3 py-2 font-mono text-sm focus:ring-1 focus:outline-none ${
+                        pasteError
+                          ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
+                          : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+                      }`}
+                    />
+                    {pasteError && (
+                      <p className="mt-1.5 text-sm text-red-600">{pasteError}</p>
+                    )}
+                    <div className="mt-3 flex gap-3">
+                      <button
+                        onClick={() => { setPasteText(''); setPasteError('') }}
+                        className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                      >
+                        Limpar
+                      </button>
+                      <button
+                        onClick={handlePasteValidate}
+                        className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+                      >
+                        Validar e visualizar
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-5">
+                  <button
+                    onClick={resetImport}
+                    className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Cancelar
                   </button>
                 </div>
               </div>
