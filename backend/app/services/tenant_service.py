@@ -276,7 +276,7 @@ def toggle_tenant_status(db: Session, tenant: Tenant) -> Tenant:
 # ── Serialization for v1 public API (Phase 2 prep) ──────────────────────────
 
 def serialize_tenant_to_v1_json(tenant: Tenant) -> dict:
-    """Serialize a decrypted tenant into the nested { "dados": { "slug": {...} } } v1 format."""
+    """Serialize a decrypted tenant into the flat { "tenant": "...", "conecta": {...} } v1 format."""
     info: dict = {"tenant": tenant.tenant_slug}
 
     # Merge extra root-level fields from config_json
@@ -357,7 +357,7 @@ def serialize_tenant_to_v1_json(tenant: Tenant) -> dict:
             },
         }
 
-    return {tenant.tenant_slug: info}
+    return info
 
 
 # ── Import / Export ───────────────────────────────────────────────────────────
