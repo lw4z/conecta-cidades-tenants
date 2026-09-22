@@ -97,11 +97,11 @@ class TestPublicList:
         _create_full_tenant(session, slug="inactive_one", is_active=False)
         resp = client.get("/api/v1/tenants", headers=_headers(api_key_raw))
         data = resp.json()
-        slugs = [d["dados"]["tenant"] for d in data]
+        slugs = [d["tenant"] for d in data]
         assert "active_one" in slugs
         assert "inactive_one" not in slugs
 
-    def test_returns_array_of_dados_objects(self, client, api_key_raw, session):
+    def test_returns_array_of_tenant_objects(self, client, api_key_raw, session):
         _create_full_tenant(session, slug="s1")
         _create_full_tenant(session, slug="s2")
         resp = client.get("/api/v1/tenants", headers=_headers(api_key_raw))
@@ -109,13 +109,12 @@ class TestPublicList:
         assert isinstance(data, list)
         assert len(data) == 2
         for entry in data:
-            assert "dados" in entry
-            assert "tenant" in entry["dados"]
+            assert "tenant" in entry
 
     def test_full_format(self, client, api_key_raw, session):
         _create_full_tenant(session)
         resp = client.get("/api/v1/tenants", headers=_headers(api_key_raw))
-        info = resp.json()[0]["dados"]
+        info = resp.json()[0]
         assert info["tenant"] == "test_tenant"
         # conecta
         assert info["conecta"]["base_url"] == "https://conecta.example.com"
@@ -133,7 +132,7 @@ class TestPublicList:
     def test_encrypted_fields_decrypted(self, client, api_key_raw, session):
         _create_full_tenant(session)
         resp = client.get("/api/v1/tenants", headers=_headers(api_key_raw))
-        info = resp.json()[0]["dados"]
+        info = resp.json()[0]
         # These were encrypted before storage
         assert info["conecta"]["token"] == "ctok123"
         assert info["whatsapp"]["turn-io"]["access-token"] == "wa_at_123"
@@ -160,7 +159,7 @@ class TestPublicList:
         ))
         session.commit()
         resp = client.get("/api/v1/tenants", headers=_headers(api_key_raw))
-        info = resp.json()[0]["dados"]
+        info = resp.json()[0]
         assert info["conecta"]["base_url"] == "https://extra.example.com"
         assert info["conecta"]["servico_fluxo_nativo"] == ["flow1", "flow2"]
         assert info["conecta"]["custom_field"] == "custom_value"
@@ -176,7 +175,7 @@ class TestPublicList:
         session.add(t)
         session.commit()
         resp = client.get("/api/v1/tenants", headers=_headers(api_key_raw))
-        info = resp.json()[0]["dados"]
+        info = resp.json()[0]
         assert info["contract_id"] == 1002
         assert info["extra_root"] is True
 
@@ -199,7 +198,7 @@ class TestPublicGetBySlug:
         _create_full_tenant(session, slug="my_tenant")
         resp = client.get("/api/v1/tenants/my_tenant", headers=_headers(api_key_raw))
         assert resp.status_code == 200
-        info = resp.json()[0]["dados"]
+        info = resp.json()[0]
         assert info["tenant"] == "my_tenant"
 
     def test_not_found(self, client, api_key_raw, session):
@@ -217,9 +216,8 @@ class TestPublicGetBySlug:
         _create_full_tenant(session, slug="fmt_check")
         resp = client.get("/api/v1/tenants/fmt_check", headers=_headers(api_key_raw))
         data = resp.json()
-        # Wrapped in [{ "dados": { "tenant": "...", ... } }]
+        # [{ "tenant": "...", ... }]
         assert isinstance(data, list)
         assert len(data) == 1
-        assert "dados" in data[0]
-        assert isinstance(data[0]["dados"], dict)
-        assert data[0]["dados"]["tenant"] == "fmt_check"
+        assert isinstance(data[0], dict)
+        assert data[0]["tenant"] == "fmt_check"

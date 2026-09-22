@@ -16,7 +16,7 @@ def list_tenants_public(
     db: Session = Depends(get_db),
 ):
     tenants = db.exec(select(Tenant).where(Tenant.is_active == True)).all()  # noqa: E712
-    return [{"dados": serialize_tenant_to_v1_json(t)} for t in tenants]
+    return [serialize_tenant_to_v1_json(t) for t in tenants]
 
 
 @router.get("/tenants/{tenant_slug}")
@@ -41,4 +41,4 @@ def get_tenant_public(
                 }
             },
         )
-    return [{"dados": serialize_tenant_to_v1_json(tenant)}]
+    return [serialize_tenant_to_v1_json(tenant)]

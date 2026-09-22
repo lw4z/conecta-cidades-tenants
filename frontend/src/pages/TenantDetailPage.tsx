@@ -77,7 +77,7 @@ function buildPublicJson(t: TenantDetailRead) {
     }
   }
 
-  return [{ dados: info }]
+  return [info]
 }
 
 function buildCurl(t: TenantDetailRead) {
