@@ -71,6 +71,7 @@ export default function Layout() {
             </svg>
             Sair
           </button>
+          <p className="mt-3 text-center text-[11px] text-gray-400">{__APP_VERSION__}</p>
         </div>
       </aside>
 
